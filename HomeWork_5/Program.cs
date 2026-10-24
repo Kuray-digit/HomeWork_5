@@ -1,202 +1,199 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
-namespace StudentsApp
+namespace BabushkaHospital
 {
-    public class Student
+    public class Disease
     {
-        public string LastName { get; set; }
-        public string FirstName { get; set; }
-        public int BirthYear { get; set; }
-        public string ExamSubject { get; set; }
-        public int Score { get; set; }
+        public string Name { get; set; }
+        public Disease(string name) => Name = name;
+        public override string ToString() => Name;
+    }
 
-        public Student() { }
-
-        public Student(string lastName, string firstName, int birthYear, string examSubject, int score)
+    public class Medicine
+    {
+        public string Name { get; set; }
+        public Disease TargetDisease { get; set; }
+        public Medicine(string name, Disease disease)
         {
-            LastName = lastName;
-            FirstName = firstName;
-            BirthYear = birthYear;
-            ExamSubject = examSubject;
-            Score = score;
+            Name = name;
+            TargetDisease = disease;
+        }
+        public override string ToString() => $"{Name} (от {TargetDisease.Name})";
+    }
+
+    public class Babushka
+    {
+        public string Name { get; set; }
+        public int Age { get; set; }
+        public List<Disease> Diseases { get; set; } = new List<Disease>();
+        public List<Medicine> Medicines { get; set; } = new List<Medicine>();
+
+        public Babushka(string name, int age)
+        {
+            Name = name;
+            Age = age;
+        }
+
+        public void AddDisease(Disease d, Medicine m)
+        {
+            Diseases.Add(d);
+            Medicines.Add(m);
         }
 
         public override string ToString()
         {
-            return $"{LastName} {FirstName} | Год рождения: {BirthYear} | Экзамен: {ExamSubject} | Баллы: {Score}";
+            string dis = Diseases.Count == 0 ? "нет болезней" : string.Join(", ", Diseases);
+            string med = Medicines.Count == 0 ? "нет лекарств" : string.Join(", ", Medicines);
+            return $"{Name} ({Age} лет) | Болезни: {dis} | Лекарства: {med}";
+        }
+    }
+
+    public class Hospital
+    {
+        public string Name { get; set; }
+        public List<Disease> TreatedDiseases { get; set; } = new List<Disease>();
+        public int Capacity { get; set; }
+        public Stack<Babushka> Patients { get; set; } = new Stack<Babushka>();
+
+        public Hospital(string name, int capacity)
+        {
+            Name = name;
+            Capacity = capacity;
         }
 
-        public string ToFileString()
-            => $"{LastName};{FirstName};{BirthYear};{ExamSubject};{Score}";
+        public bool IsFull => Patients.Count >= Capacity;
+        public int FreePlaces => Capacity - Patients.Count;
+        public double FillPercent => Capacity == 0 ? 0 : (double)Patients.Count / Capacity * 100;
 
-        public static Student FromFileString(string line)
+        public bool CanTreat(Babushka b)
         {
-            var parts = line.Split(';');
-            if (parts.Length != 5) return null;
-            return new Student(parts[0].Trim(), parts[1].Trim(),
-                int.Parse(parts[2]), parts[3].Trim(), int.Parse(parts[4]));
+            if (b.Diseases.Count == 0) return true;
+            int matched = b.Diseases.Count(d => TreatedDiseases.Any(t => t.Name == d.Name));
+            return matched * 2 > b.Diseases.Count;
+        }
+
+        public override string ToString()
+        {
+            string dis = TreatedDiseases.Count == 0 ? "—" : string.Join(", ", TreatedDiseases);
+            return $"{Name} | Лечит: {dis} | Пациентов: {Patients.Count}/{Capacity} | " +
+                   $"Заполненность: {FillPercent:F1}%";
         }
     }
 
     class Program
     {
-        private const string FilePath = "students.txt";
-
-        static Dictionary<(string LastName, string FirstName), Student> students
-            = new Dictionary<(string, string), Student>();
-
-        static void Main(string[] args)
+        static void Main()
         {
-            LoadStudents();
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            if (students.Count == 0)
+            Disease gripp = new Disease("Грипп");
+            Disease prostud = new Disease("Простуда");
+            Disease davlenie = new Disease("Давление");
+            Disease serdce = new Disease("Сердце");
+            Disease sustavy = new Disease("Суставы");
+            Disease[] allDiseases = { gripp, prostud, davlenie, serdce, sustavy };
+
+            Stack<Hospital> hospitals = new Stack<Hospital>();
+
+            hospitals.Push(new Hospital("Городская больница №1", 3)
+            { TreatedDiseases = { gripp, prostud, davlenie } });
+            hospitals.Push(new Hospital("Кардиоцентр", 2)
+            { TreatedDiseases = { serdce, davlenie } });
+            hospitals.Push(new Hospital("Ревматология", 2)
+            { TreatedDiseases = { sustavy, prostud } });
+
+            Queue<Babushka> babushki = new Queue<Babushka>();
+
+            Console.WriteLine("Введите количество бабуль:");
+            int n = int.Parse(Console.ReadLine() ?? "0");
+
+            for (int i = 0; i < n; i++)
             {
-                AddDefaultStudents();
-                SaveStudents();
-            }
-
-            while (true)
-            {
-                Console.WriteLine("\n=== МЕНЮ ===");
-                Console.WriteLine("1. Новый студент");
-                Console.WriteLine("2. Удалить");
-                Console.WriteLine("3. Сортировать");
-                Console.WriteLine("4. Показать всех");
-                Console.WriteLine("0. Выход");
-                Console.Write("Введите команду: ");
-                var cmd = Console.ReadLine()?.Trim().ToLower();
-
-                switch (cmd)
-                {
-                    case "1":
-                    case "новый студент":
-                        AddStudent();
-                        SaveStudents();
-                        break;
-
-                    case "2":
-                    case "удалить":
-                        RemoveStudent();
-                        SaveStudents();
-                        break;
-
-                    case "3":
-                    case "сортировать":
-                        PrintAll(students.Values.OrderBy(s => s.Score));
-                        break;
-
-                    case "4":
-                    case "показать":
-                        PrintAll(students.Values);
-                        break;
-
-                    case "0":
-                    case "выход":
-                        return;
-
-                    default:
-                        Console.WriteLine("Неизвестная команда.");
-                        break;
-                }
-            }
-        }
-
-        static void AddDefaultStudents()
-        {
-            var list = new List<Student>
-            {
-                new Student("Иванов", "Иван", 2008, "Математика", 85),
-                new Student("Петров", "Пётр", 2008, "Физика", 78),
-                new Student("Сидоров", "Сидор", 2009, "Информатика", 92),
-                new Student("Кузнецова", "Анна", 2008, "Математика", 74),
-                new Student("Смирнов", "Алексей", 2008, "Химия", 88),
-                new Student("Волкова", "Мария", 2009, "Биология", 90),
-                new Student("Морозов", "Дмитрий", 2009, "История", 81),
-                new Student("Новикова", "Ольга", 2007, "Литература", 79),
-                new Student("Фёдоров", "Николай", 2008, "Информатика", 95),
-                new Student("Соколова", "Екатерина", 2008, "География", 83)
-            };
-
-            foreach (var s in list)
-                students[(s.LastName, s.FirstName)] = s;
-        }
-
-        static void LoadStudents()
-        {
-            if (!File.Exists(FilePath)) return;
-
-            foreach (var line in File.ReadAllLines(FilePath))
-            {
-                if (string.IsNullOrWhiteSpace(line)) continue;
-                var s = Student.FromFileString(line);
-                if (s != null)
-                    students[(s.LastName, s.FirstName)] = s;
-            }
-        }
-
-        static void SaveStudents()
-        {
-            File.WriteAllLines(FilePath, students.Values.Select(s => s.ToFileString()));
-        }
-
-        static void PrintAll(IEnumerable<Student> source)
-        {
-            int i = 1;
-            bool any = false;
-            foreach (var s in source)
-            {
-                Console.WriteLine($"{i++}. {s}");
-                any = true;
-            }
-            if (!any) Console.WriteLine("Список пуст.");
-        }
-
-        static void AddStudent()
-        {
-            try
-            {
-                Console.Write("Фамилия: ");
-                var lastName = Console.ReadLine()?.Trim();
+                Console.WriteLine($"\n--- Бабуля #{i + 1} ---");
                 Console.Write("Имя: ");
-                var firstName = Console.ReadLine()?.Trim();
-                Console.Write("Год рождения: ");
-                var birthYear = int.Parse(Console.ReadLine()!);
-                Console.Write("Экзамен: ");
-                var exam = Console.ReadLine()?.Trim();
-                Console.Write("Баллы: ");
-                var score = int.Parse(Console.ReadLine()!);
+                string name = Console.ReadLine() ?? "Безымянная";
+                Console.Write("Возраст: ");
+                int age = int.Parse(Console.ReadLine() ?? "0");
 
-                var key = (lastName, firstName);
-                if (students.ContainsKey(key))
+                Babushka b = new Babushka(name, age);
+
+                Console.Write("Сколько болезней? ");
+                int cnt = int.Parse(Console.ReadLine() ?? "0");
+
+                for (int j = 0; j < cnt; j++)
                 {
-                    Console.WriteLine("Студент с такой фамилией и именем уже существует.");
-                    return;
+                    Console.WriteLine("Доступные болезни: " + string.Join(", ", allDiseases.Select(x => x.Name)));
+                    Console.Write("Болезнь: ");
+                    string dName = (Console.ReadLine() ?? "").Trim();
+                    Disease d = allDiseases.FirstOrDefault(x =>
+                        x.Name.Equals(dName, StringComparison.OrdinalIgnoreCase));
+                    if (d == null) { Console.WriteLine("Неизвестная болезнь."); continue; }
+
+                    Console.Write($"Лекарство от {d.Name}: ");
+                    string mName = Console.ReadLine() ?? "Таблетка";
+                    b.AddDisease(d, new Medicine(mName, d));
                 }
 
-                students[key] = new Student(lastName, firstName, birthYear, exam, score);
-                Console.WriteLine("Студент добавлен.");
+                babushki.Enqueue(b);  // бабуля встаёт в очередь
             }
-            catch (Exception ex)
+
+
+            Hospital[] hospitalsOrder = hospitals.Reverse().ToArray();
+
+            Queue<Babushka> street = new Queue<Babushka>();
+
+            Console.WriteLine("\n===== РАСПРЕДЕЛЕНИЕ =====\n");
+
+            while (babushki.Count > 0)
             {
-                Console.WriteLine($"Ошибка ввода: {ex.Message}");
+                Babushka b = babushki.Dequeue();
+                Hospital target = null;
+
+                if (b.Diseases.Count == 0)
+                {
+                    // "только спросить" — первая свободная клиника
+                    target = hospitalsOrder.FirstOrDefault(h => !h.IsFull);
+                    Console.WriteLine(target != null
+                        ? $"{b.Name} (без болезней) → в {target.Name} (спросить)"
+                        : $"{b.Name} (без болезней) не нашла свободной клиники.");
+                }
+                else
+                {
+                    target = hospitalsOrder.FirstOrDefault(h => !h.IsFull && h.CanTreat(b));
+                    Console.WriteLine(target != null
+                        ? $"{b.Name} → в {target.Name}"
+                        : $"{b.Name} — ни одна больница не лечит (>50% болезней) или нет мест.");
+                }
+
+                if (target != null)
+                    target.Patients.Push(b);  
+                else
+                    street.Enqueue(b);         // плакать на улице
             }
-        }
 
-        static void RemoveStudent()
-        {
-            Console.Write("Введите фамилию: ");
-            var lastName = Console.ReadLine()?.Trim();
-            Console.Write("Введите имя: ");
-            var firstName = Console.ReadLine()?.Trim();
+            Console.WriteLine("\n===== СПИСОК ВСЕХ БАБУЛЬ ПО БОЛЬНИЦАМ =====");
+            foreach (var h in hospitalsOrder)
+            {
+                if (h.Patients.Count > 0)
+                {
+                    Console.WriteLine($"\n[{h.Name}] (сверху стека — последняя поступившая):");
+                    foreach (var b in h.Patients)
+                        Console.WriteLine("  " + b);
+                }
+            }
 
-            var key = (lastName, firstName);
-            if (students.Remove(key))
-                Console.WriteLine($"Студент {lastName} {firstName} удалён.");
-            else
-                Console.WriteLine("Студент не найден.");
+            if (street.Count > 0)
+            {
+                Console.WriteLine("\n[На улице плачут]:");
+                foreach (var b in street)
+                    Console.WriteLine("  " + b);
+            }
+
+            Console.WriteLine("\n===== СПИСОК ВСЕХ БОЛЬНИЦ =====");
+            foreach (var h in hospitalsOrder)
+                Console.WriteLine(h);
         }
     }
 }
