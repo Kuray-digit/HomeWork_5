@@ -28,13 +28,6 @@ namespace Homework
             Console.WriteLine("Введите значения элементов матрицы:");
             string[] secondArray = (Console.ReadLine() ?? "").Split();
             secondMatrix = MatrixMaker(secondArray);
-            foreach (int i in firstMatrix) {
-                Console.WriteLine(i);
-                    }
-            foreach (int i in secondMatrix)
-            {
-                Console.WriteLine(i);
-            }
             int[,] multiplication = {
             {firstMatrix[0,0] * secondMatrix[0,0] + firstMatrix[0,1] * secondMatrix[1,0],
                 firstMatrix[0,0] * secondMatrix[0,1] + firstMatrix[0,1] * secondMatrix[1,1]},
