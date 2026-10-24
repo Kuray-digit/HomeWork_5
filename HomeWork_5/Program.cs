@@ -1,63 +1,73 @@
 ﻿using System;
+using System.Collections.Generic; 
 
 namespace Homework
 {
     class Program
     {
-        static double[] CalculateMonthlyAverages(int[,] temperature)
+        static double[] CalculateMonthlyAverages(Dictionary<string, int[]> temperature)
         {
-            int months = temperature.GetLength(0);
-            int days = temperature.GetLength(1);
-            double[] averages = new double[months];
+            double[] averages = new double[temperature.Count];
+            int index = 0;
 
-            for (int i = 0; i < months; i++)
+            foreach (var month in temperature)
             {
                 int sum = 0;
+                int days = month.Value.Length; 
                 for (int j = 0; j < days; j++)
                 {
-                    sum += temperature[i, j];
+                    sum += month.Value[j];
                 }
-                averages[i] = Math.Round((double)sum / days);
+
+                averages[index] = Math.Round((double)sum / days);
+                index++;
             }
 
             return averages;
         }
+
         public static void Main(string[] args)
         {
-            const int Months = 12;
-            const int Days = 30;
-            int[,] temperature = new int[Months, Days];
-
-            Random rnd = new Random();
-            for (int i = 0; i < Months; i++)
-            {
-                for (int j = 0; j < Days; j++)
-                {
-                    temperature[i, j] = rnd.Next(-20, 31);
-                }
-            }
-            double[] averageTemps = CalculateMonthlyAverages(temperature);
             string[] monthNames =
             {
-            "Январь", "Февраль", "Март", "Апрель",
-            "Май", "Июнь", "Июль", "Август",
-            "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+                "Январь", "Февраль", "Март", "Апрель",
+                "Май", "Июнь", "Июль", "Август",
+                "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
             };
 
-            Console.WriteLine("Средняя температура по месяцам:");
-            for (int i = 0; i < Months; i++)
+            const int Days = 30;
+            Dictionary<string, int[]> temperature = new Dictionary<string, int[]>();
+
+            Random rnd = new Random();
+
+            foreach (string month in monthNames)
             {
-                Console.WriteLine($"{monthNames[i],-10}: {averageTemps[i]} °C");
+                int[] monthTemps = new int[Days];
+                for (int j = 0; j < Days; j++)
+                {
+                    monthTemps[j] = rnd.Next(-20, 31);
+                }
+                temperature.Add(month, monthTemps);
             }
-            // "-10" - считает сколько всего в строчке символов и прибавляет пробелы до 10
+
+            double[] averageTemps = CalculateMonthlyAverages(temperature);
+
+            Console.WriteLine("Средняя температура по месяцам:");
+
+            int count = 0;
+            foreach (var month in temperature)
+            {
+                Console.WriteLine($"{month.Key,-10}: {averageTemps[count]} °C");
+                count++;
+            }
+
             Array.Sort(averageTemps);
 
             Console.WriteLine("\nСредние температуры, отсортированные по возрастанию:");
-            for (int i = 0; i < Months; i++)
+            for (int i = 0; i < averageTemps.Length; i++)
             {
                 Console.WriteLine($"{averageTemps[i]} °C");
             }
-
         }
     }
 }
