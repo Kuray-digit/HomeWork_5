@@ -1,49 +1,97 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Homework
 {
     class Program
     {
-        public static int[,] MatrixMaker(string[] array)
+        public static LinkedList<LinkedList<int>> MatrixMaker(string[] array)
         {
-            int[,] matrix = new int[2,2];
-            byte firstOperator = 0;
-            byte secondOperator = 0;
+            LinkedList<LinkedList<int>> matrix = new LinkedList<LinkedList<int>>();
+            LinkedList<int> currentRow = new LinkedList<int>();
+
             foreach (string i in array)
             {
-                matrix[secondOperator, firstOperator] = int.Parse(i);
-                firstOperator += 1;
-                if (firstOperator == 2) { firstOperator = 0; secondOperator += 1; }
-                if (secondOperator == 2) secondOperator = 0;
+                currentRow.AddLast(int.Parse(i));
+
+                if (currentRow.Count == 2)
+                {
+                    matrix.AddLast(currentRow);
+                    currentRow = new LinkedList<int>();
+                }
             }
+
             return matrix;
         }
+
         public static void Main(string[] args)
         {
-            int[,] firstMatrix = new int[2,2];
-            int[,] secondMatrix = new int[2,2];
+            LinkedList<LinkedList<int>> firstMatrix = new LinkedList<LinkedList<int>>();
+            LinkedList<LinkedList<int>> secondMatrix = new LinkedList<LinkedList<int>>();
+
             Console.WriteLine("Введите значения элементов матрицы:");
             string[] firstArray = (Console.ReadLine() ?? "").Split();
             firstMatrix = MatrixMaker(firstArray);
+
             Console.WriteLine("Введите значения элементов матрицы:");
             string[] secondArray = (Console.ReadLine() ?? "").Split();
             secondMatrix = MatrixMaker(secondArray);
-            foreach (int i in firstMatrix) {
-                Console.WriteLine(i);
-                    }
-            foreach (int i in secondMatrix)
+
+
+            LinkedList<LinkedList<int>> multiplication = new LinkedList<LinkedList<int>>();
+
+            int[][] firstArr = new int[2][];
+            int[][] secondArr = new int[2][];
+
+            int rowIndex = 0;
+            foreach (LinkedList<int> row in firstMatrix)
             {
-                Console.WriteLine(i);
+                firstArr[rowIndex] = new int[2];
+                int colIndex = 0;
+                foreach (int val in row)
+                {
+                    firstArr[rowIndex][colIndex] = val;
+                    colIndex++;
+                }
+                rowIndex++;
             }
-            int[,] multiplication = {
-            {firstMatrix[0,0] * secondMatrix[0,0] + firstMatrix[0,1] * secondMatrix[1,0],
-                firstMatrix[0,0] * secondMatrix[0,1] + firstMatrix[0,1] * secondMatrix[1,1]},
-            {firstMatrix[1,0] * secondMatrix[0,0] + firstMatrix[1,1] * secondMatrix[1,0],
-                firstMatrix[1,0] * secondMatrix[0,1] + firstMatrix[1,1] * secondMatrix[1,1]}
-            };
-            foreach (int i in multiplication) {
-                Console.WriteLine(i);
+
+            rowIndex = 0;
+            foreach (LinkedList<int> row in secondMatrix)
+            {
+                secondArr[rowIndex] = new int[2];
+                int colIndex = 0;
+                foreach (int val in row)
+                {
+                    secondArr[rowIndex][colIndex] = val;
+                    colIndex++;
+                }
+                rowIndex++;
+            }
+
+
+            for (int i = 0; i < 2; i++)
+            {
+                LinkedList<int> resultRow = new LinkedList<int>();
+                for (int j = 0; j < 2; j++)
+                {
+                    int sum = 0;
+                    for (int k = 0; k < 2; k++)
+                    {
+                        sum += firstArr[i][k] * secondArr[k][j];
                     }
+                    resultRow.AddLast(sum);
+                }
+                multiplication.AddLast(resultRow);
+            }
+
+            foreach (LinkedList<int> row in multiplication)
+            {
+                foreach (int i in row)
+                {
+                    Console.WriteLine(i);
+                }
+            }
         }
     }
 }
